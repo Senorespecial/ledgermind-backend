@@ -1,49 +1,43 @@
-import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
+} from '@nestjs/common';
+import { PrismaClient } from '@prisma/client';
 
 /**
- * Minimal interface that mirrors the PrismaClient surface we actually use.
- * This keeps the file type-safe without requiring `prisma generate` to have
- * run. Once `prisma generate` has been executed, the real PrismaClient will
- * satisfy this interface automatically.
- */
-interface PrismaClientLike {
-  $connect(): Promise<void>;
-  $disconnect(): Promise<void>;
-}
-
-/**
- * PrismaService provides database access via the Prisma ORM.
+ * Provides database access via the Prisma ORM.
  *
- * The PrismaClient is loaded at runtime so this file compiles cleanly
- * even before `prisma generate` has been run.
+ * Extends the generated `PrismaClient` so the NestJS app uses the same
+ * client types that `prisma generate` produced against `prisma/schema.prisma`.
  *
- * Setup steps:
- *   1. Copy .env.example → .env and set DATABASE_URL
- *   2. npm run prisma:migrate   (runs prisma generate automatically)
+ * Connection management:
+ *  - `onModuleInit` opens a connection against the URL PrismaClient reads
+ *    from `process.env.DATABASE_URL` (set by `src/common/env.validation.ts`
+ *    from the same env-based resolver that powers `prisma.config.ts`).
+ *  - `onModuleDestroy` closes it on shutdown.
+ *
+ * Setup expectation: run `npm run prisma:generate` once after a fresh
+ * `npm install` (or after any change to `prisma/schema.prisma`) so
+ * `@prisma/client` types exist before this file is compiled. We do not
+ * auto-run generate from a postinstall script because the eager resolver
+ * in `prisma.config.ts` requires a database URL, which breaks clean
+ * `npm install` in CI / Docker / fresh-dev environments without env vars.
  */
 @Injectable()
-export class PrismaService implements OnModuleInit, OnModuleDestroy {
-  private readonly prisma: PrismaClientLike | null;
+export class PrismaService
+  extends PrismaClient
+  implements OnModuleInit, OnModuleDestroy
+{
+  private readonly logger = new Logger(PrismaService.name);
 
-  constructor() {
-    try {
-      // Dynamic require keeps the build clean before prisma generate runs.
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const mod = require('@prisma/client') as {
-        PrismaClient: new () => PrismaClientLike;
-      };
-      this.prisma = new mod.PrismaClient();
-    } catch {
-      // Prisma client not yet generated — safe during build/lint step.
-      this.prisma = null;
-    }
+  async onModuleInit(): Promise<void> {
+    await this.$connect();
+    this.logger.log('Prisma connected');
   }
 
-  async onModuleInit() {
-    await this.prisma?.$connect();
-  }
-
-  async onModuleDestroy() {
-    await this.prisma?.$disconnect();
+  async onModuleDestroy(): Promise<void> {
+    await this.$disconnect();
   }
 }
