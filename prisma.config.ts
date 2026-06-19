@@ -1,39 +1,30 @@
-type EnvKey = 'DATABASE_URL' | `DATABASE_URL_${string}`;
+import { defineConfig } from '@prisma/config';
+import { resolveDatabaseUrl } from './src/common/prisma-url';
 
-function resolveDatabaseUrl(): string {
-  const explicit = process.env.DATABASE_URL;
-  if (explicit && explicit.trim().length > 0) return explicit;
-
-  const stage = (process.env.STAGE ?? process.env.NODE_ENV ?? '')
-    .toUpperCase()
-    .trim();
-
-  // Common convention: DATABASE_URL_DEV / DATABASE_URL_TEST / DATABASE_URL_PROD
-  const candidates: string[] = [];
-  if (stage) {
-    candidates.push(`DATABASE_URL_${stage}`);
-    // Allow STAGING to map to PREPROD-like envs if users prefer.
-    if (stage === 'STAGING') candidates.push('DATABASE_URL_PROD');
-  }
-
-  for (const key of candidates) {
-    const value = process.env[key as EnvKey];
-    if (value && value.trim().length > 0) return value;
-  }
-
-  throw new Error(
-    'Missing PostgreSQL connection string. Provide process.env.DATABASE_URL (recommended) or one of: DATABASE_URL_DEV/DATABASE_URL_TEST/DATABASE_URL_PROD (or set STAGE/NODE_ENV accordingly).',
-  );
-}
-
-const options: {
-  datasources: { db: { url: string } };
-} = {
-  datasources: {
-    db: {
-      url: resolveDatabaseUrl(),
-    },
+/**
+ * Prisma 6 PrismaConfig (`defineConfig` from `@prisma/config`).
+ *
+ * Under Prisma 6 the database connection lives under `datasource` (singular)
+ * on the classic engine path. Prisma's CLI (`prisma generate`,
+ * `prisma migrate`, `prisma studio`) reads `datasource.url` here and
+ * overrides any `url = env(...)` declared in `prisma/schema.prisma`.
+ *
+ * The URL value resolves through the same env-based chain used at runtime
+ * by `src/common/env.validation.ts` (mirrored into `process.env.DATABASE_URL`
+ * before `PrismaClient` construction):
+ *
+ *   1. `DATABASE_URL` (preferred)
+ *   2. `DATABASE_URL_<STAGE>` based on `STAGE` / `NODE_ENV`
+ *   3. `STAGING` -> `DATABASE_URL_PROD` alias
+ *
+ * The schema's `url = env("DATABASE_URL")` line in `prisma/schema.prisma`
+ * is intentionally retained for runtime defense-in-depth: when the
+ * generated PrismaClient is constructed at NestJS startup time, it reads
+ * `process.env.DATABASE_URL`; that env var is set by `validateEnv()`.
+ */
+export default defineConfig({
+  engine: 'classic',
+  datasource: {
+    url: resolveDatabaseUrl(),
   },
-};
-
-export default options;
+});
