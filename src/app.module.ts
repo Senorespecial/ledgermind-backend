@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { HealthController } from './health/health.controller';
 import { PrismaService } from './prisma/prisma.service';
 import { AccountingModule } from './modules/accounting/accounting.module';
 import { TreasuryModule } from './modules/treasury/treasury.module';
@@ -16,7 +17,7 @@ import { ReportingModule } from './modules/reporting/reporting.module';
     AiModule,
     ReportingModule,
   ],
-  controllers: [AppController],
+  controllers: [AppController, HealthController],
   providers: [AppService, PrismaService],
   exports: [PrismaService],
 })
