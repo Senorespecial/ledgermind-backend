@@ -26,4 +26,4 @@ Also added shared/infrastructure scaffold (new files only):
 
 ## Note about current dev server
 
-A `nest start --watch` attempt surfaced a pre-existing TypeScript parse error inside `prisma/prisma.config.ts` (unrelated to the scaffold files added).
+A `nest start --watch` attempt surfaced a pre-existing TypeScript parse error inside `prisma/prisma.config.ts` (unrelated to the scaffold files added). That file has since been removed; the canonical config now lives at `prisma.config.ts` at the repository root.
