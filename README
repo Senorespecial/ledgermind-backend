@@ -78,3 +78,20 @@ Cross-chain analytics
 # Vision
 
 To simplify blockchain accounting and treasury management.
+
+# Environment Variables
+
+Prisma reads its PostgreSQL connection from `prisma.config.ts` at the repository root and from `url = env("DATABASE_URL")` declared in `prisma/schema.prisma`. The `prisma.config.ts` resolver builds the connection string in this order:
+
+1. `DATABASE_URL` (recommended, also the value Prisma's standard env resolution reads via `schema.prisma`).
+2. `DATABASE_URL_<STAGE>` where `<STAGE>` comes from `STAGE` (or `NODE_ENV`) upper-cased — common values: `DEV`, `TEST`, `PROD`.
+3. When `STAGE=STAGING`, the lookup also falls back to `DATABASE_URL_PROD`.
+
+If none of these are set, the resolver throws an explicit `Missing PostgreSQL connection string` error so the misconfiguration is obvious.
+
+Set at minimum one of:
+
+- `DATABASE_URL` — for the common case.
+- `DATABASE_URL_DEV` / `DATABASE_URL_TEST` / `DATABASE_URL_PROD` plus `STAGE` or `NODE_ENV` — for environment-specific workflows.
+
+For full setup, migration, and Prisma Studio instructions, see [README_PRISMA_INITIALIZATION.md](./README_PRISMA_INITIALIZATION.md).
