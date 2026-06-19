@@ -1,8 +1,10 @@
 import { NestFactory } from '@nestjs/core';
 import { VersioningType } from '@nestjs/common';
 import { AppModule } from './app.module';
+import { validateEnv } from './common/env.validation';
 
 async function bootstrap() {
+  validateEnv();
   const app = await NestFactory.create(AppModule);
 
   /**
